@@ -44,7 +44,7 @@ public class SnakeCamera : MonoBehaviour
 
     private void InitializeCameraPosition()
     {
-        // Posição inicial baseada nas configurações
+        // Posiï¿½ï¿½o inicial baseada nas configuraï¿½ï¿½es
         Vector3 offset = CalculateOffset();
         transform.position = target.position + offset;
         transform.LookAt(target.position);
@@ -54,11 +54,11 @@ public class SnakeCamera : MonoBehaviour
     {
         if (!dynamicDistance) return;
 
-        // Calcula distância dinâmica baseada na velocidade da cobra
+        // Calcula distï¿½ncia dinï¿½mica baseada na velocidade da cobra
         float speedFactor = 1f;
         if (target.TryGetComponent<Rigidbody>(out var rb))
         {
-            speedFactor = Mathf.Clamp(rb.velocity.magnitude * distanceSpeedFactor, 0.8f, 1.5f);
+            speedFactor = Mathf.Clamp(rb.linearVelocity.magnitude * distanceSpeedFactor, 0.8f, 1.5f);
         }
 
         currentDistance = Mathf.Lerp(
@@ -70,10 +70,10 @@ public class SnakeCamera : MonoBehaviour
 
     private void FollowTarget()
     {
-        // Calcula offset com a distância atual
+        // Calcula offset com a distï¿½ncia atual
         Vector3 offset = CalculateOffset();
 
-        // Suaviza movimento da posição
+        // Suaviza movimento da posiï¿½ï¿½o
         Vector3 targetPosition = target.position + offset;
         transform.position = Vector3.SmoothDamp(
             transform.position,
@@ -82,7 +82,7 @@ public class SnakeCamera : MonoBehaviour
             positionSmoothTime
         );
 
-        // Suaviza rotação para olhar para o alvo
+        // Suaviza rotaï¿½ï¿½o para olhar para o alvo
         Quaternion targetRotation = Quaternion.LookRotation(target.position - transform.position);
         float delta = rotationSmoothTime * Time.deltaTime;
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, delta);
@@ -90,7 +90,7 @@ public class SnakeCamera : MonoBehaviour
 
     private Vector3 CalculateOffset()
     {
-        // Calcula offset baseado em ângulo, altura e distância
+        // Calcula offset baseado em ï¿½ngulo, altura e distï¿½ncia
         Vector3 offset = new Vector3(0, height, -currentDistance);
         offset = Quaternion.Euler(angle, 0, 0) * offset;
         return offset;
