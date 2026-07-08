@@ -1,7 +1,7 @@
 using UnityEngine;
-
+using Unity.Netcode;
 [RequireComponent(typeof(Camera))]
-public class SnakeCamera : MonoBehaviour
+public class SnakeCamera : NetworkBehaviour
 {
     [Header("Target Settings")]
     [SerializeField] private Transform target;

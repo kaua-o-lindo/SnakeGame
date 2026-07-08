@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using Unity.VisualScripting;
+using UnityEngine;
+using Unity.Netcode;
 
-public class SnakeController : MonoBehaviour
+public class SnakeController : NetworkBehaviour
 {
     [Header("Configurações de Movimento")]
     public float velocidadeMovimento = 5f;
@@ -58,6 +60,10 @@ public class SnakeController : MonoBehaviour
 
     void Update()
     {
+        if (!GameManager.Instance.partidaComecou.Value)
+            return;
+
+        // resto do movimento
         if (!estaVivo || !jogoIniciado) return;
 
         MoverCobra();

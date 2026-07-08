@@ -1,24 +1,54 @@
 using UnityEngine;
+using Unity.Netcode;
 
-public class AppleSpawner : MonoBehaviour
+public class AppleSpawner : NetworkBehaviour
 {
+    [Header("Apple")]
     public GameObject applePrefab;
-    public Vector2 spawnRangeX = new Vector2(-8f, 8f);
-    public Vector2 spawnRangeZ = new Vector2(-8f, 8f);
 
-    void Start()
+    [Header("Spawn Area")]
+    public Vector2 spawnX = new Vector2(-8, 8);
+    public Vector2 spawnZ = new Vector2(-8, 8);
+
+    public static AppleSpawner Instance;
+
+    private void Awake()
     {
-        SpawnApple();
+        Instance = this;
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
+        {
+            SpawnApple();
+        }
     }
 
     public void SpawnApple()
     {
-        Vector3 position = new Vector3(
-            Random.Range(spawnRangeX.x, spawnRangeX.y),
+        if (!IsServer)
+            return;
+
+        Vector3 pos = new Vector3(
+            Random.Range(spawnX.x, spawnX.y),
             0.5f,
-            Random.Range(spawnRangeZ.x, spawnRangeZ.y)
+            Random.Range(spawnZ.x, spawnZ.y)
         );
 
-        Instantiate(applePrefab, position, Quaternion.identity);
+        GameObject apple = Instantiate(applePrefab, pos, Quaternion.identity);
+
+        NetworkObject net = apple.GetComponent<NetworkObject>();
+
+        if (net != null)
+        {
+            net.Spawn(true);
+        }
+    }
+
+    [ServerRpc(RequireOwnership= false)]
+    public void SpawnAppleServerRpc()
+    {
+        SpawnApple();
     }
 }

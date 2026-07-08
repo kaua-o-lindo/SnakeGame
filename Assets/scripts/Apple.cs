@@ -1,17 +1,25 @@
 using UnityEngine;
+using Unity.Netcode;
 
-public class Apple : MonoBehaviour
+public class Apple : NetworkBehaviour
 {
-    void Start()
+    private void Start()
     {
-        // Garante que a maçã tenha a tag correta
         gameObject.tag = "Apple";
     }
 
-    // Este método pode ser expandido para incluir comportamentos adicionais
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
-        // Por enquanto, não é necessário implementar nada aqui,
-        // pois a lógica de colisão está no script da cobrinha.
+        if (!IsServer)
+            return;
+
+        SnakeController snake = other.GetComponent<SnakeController>();
+
+        if (snake == null)
+            return;
+
+        NetworkObject.Despawn(true);
+
+        AppleSpawner.Instance.SpawnApple();
     }
 }
