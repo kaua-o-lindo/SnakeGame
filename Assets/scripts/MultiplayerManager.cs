@@ -1,7 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using Unity.Netcode;
 using TMPro;
-using System.Collections;
 
 public class MultiplayerManager : NetworkBehaviour
 {
@@ -12,11 +12,14 @@ public class MultiplayerManager : NetworkBehaviour
     public TextMeshProUGUI playersText;
     public TextMeshProUGUI countdownText;
 
-    public NetworkVariable<bool> GameStarted =
-        new NetworkVariable<bool>(false);
+    [Header("Spawn Points")]
+    public Transform player1Spawn;
+    public Transform player2Spawn;
 
-    public NetworkVariable<int> Players =
-        new NetworkVariable<int>(0);
+    public NetworkVariable<bool> partidaComecou = new NetworkVariable<bool>(false);
+    public NetworkVariable<int> jogadores = new NetworkVariable<int>(0);
+
+    private bool iniciando = false;
 
     private void Awake()
     {
@@ -25,37 +28,77 @@ public class MultiplayerManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        Players.OnValueChanged += OnPlayersChanged;
-        GameStarted.OnValueChanged += OnGameStarted;
-
         if (IsServer)
         {
-            Players.Value = NetworkManager.Singleton.ConnectedClients.Count;
+            jogadores.Value = NetworkManager.Singleton.ConnectedClientsList.Count;
 
-            NetworkManager.Singleton.OnClientConnectedCallback += ClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += ClientDisconnected;
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
 
-        waitingPanel.SetActive(true);
+        jogadores.OnValueChanged += AtualizarUI;
+        partidaComecou.OnValueChanged += PartidaIniciou;
+
+        AtualizarUI(0, jogadores.Value);
+
+        if (waitingPanel != null)
+            waitingPanel.SetActive(true);
     }
 
-    void ClientConnected(ulong id)
+    void OnDestroy()
     {
-        Players.Value = NetworkManager.Singleton.ConnectedClients.Count;
+        if (NetworkManager.Singleton == null)
+            return;
 
-        if (Players.Value >= 2 && !GameStarted.Value)
+        NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+        NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+    }
+
+    void OnClientConnected(ulong clientId)
+    {
+        jogadores.Value = NetworkManager.Singleton.ConnectedClientsList.Count;
+
+        PosicionarJogadores();
+
+        if (jogadores.Value >= 2 && !iniciando)
         {
-            StartCoroutine(StartGame());
+            StartCoroutine(IniciarPartida());
         }
     }
 
-    void ClientDisconnected(ulong id)
+    void OnClientDisconnected(ulong clientId)
     {
-        Players.Value = NetworkManager.Singleton.ConnectedClients.Count;
+        jogadores.Value = NetworkManager.Singleton.ConnectedClientsList.Count;
     }
 
-    IEnumerator StartGame()
+    void PosicionarJogadores()
     {
+        int index = 0;
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        {
+            if (client.PlayerObject == null)
+                continue;
+
+            if (index == 0)
+            {
+                client.PlayerObject.transform.position = player1Spawn.position;
+                client.PlayerObject.transform.rotation = player1Spawn.rotation;
+            }
+            else if (index == 1)
+            {
+                client.PlayerObject.transform.position = player2Spawn.position;
+                client.PlayerObject.transform.rotation = player2Spawn.rotation;
+            }
+
+            index++;
+        }
+    }
+
+    IEnumerator IniciarPartida()
+    {
+        iniciando = true;
+
         CountdownClientRpc("3");
         yield return new WaitForSeconds(1);
 
@@ -68,22 +111,33 @@ public class MultiplayerManager : NetworkBehaviour
         CountdownClientRpc("GO!");
         yield return new WaitForSeconds(1);
 
-        GameStarted.Value = true;
+        partidaComecou.Value = true;
     }
 
-    void OnPlayersChanged(int oldValue, int newValue)
+    void AtualizarUI(int oldValue, int newValue)
     {
-        playersText.text = $"Jogadores: {newValue}/2";
+        if (playersText != null)
+            playersText.text = $"Jogadores: {newValue}/2";
     }
 
-    void OnGameStarted(bool oldValue, bool newValue)
+    void PartidaIniciou(bool oldValue, bool newValue)
     {
-        waitingPanel.SetActive(!newValue);
+        if (waitingPanel != null)
+            waitingPanel.SetActive(!newValue);
+
+        if (countdownText != null && newValue)
+            countdownText.text = "";
     }
 
     [ClientRpc]
-    void CountdownClientRpc(string text)
+    void CountdownClientRpc(string texto)
     {
-        countdownText.text = text;
+        if (countdownText != null)
+            countdownText.text = texto;
+    }
+
+    public bool PodeJogar()
+    {
+        return partidaComecou.Value;
     }
 }
