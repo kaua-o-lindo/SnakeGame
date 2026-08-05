@@ -1741,7 +1741,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: arvore (10)
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7179581281381083924, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

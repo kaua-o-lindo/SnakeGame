@@ -13,7 +13,7 @@ public class Apple : NetworkBehaviour
         if (!IsServer)
             return;
 
-        SnakeController snake = other.GetComponent<SnakeController>();
+       Camera snake = other.GetComponent<Camera>();
 
         if (snake == null)
             return;
