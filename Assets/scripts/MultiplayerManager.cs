@@ -8,24 +8,22 @@ public class MultiplayerManager : NetworkBehaviour
     public static MultiplayerManager Instance;
 
     [Header("UI")]
-    [SerializeField] private GameObject waitingPanel;
-    [SerializeField] private TextMeshProUGUI playersText;
-    [SerializeField] private TextMeshProUGUI countdownText;
+    public GameObject waitingPanel;
+    public TextMeshProUGUI playersText;
+    public TextMeshProUGUI countdownText;
 
-    [Header("SPAWN DOS JOGADORES")]
-    [SerializeField] private Transform player1Spawn;
-    [SerializeField] private Transform player2Spawn;
+    [Header("Spawn Points")]
+    public Transform player1Spawn;
+    public Transform player2Spawn;
 
-    [Header("Configuração")]
-    [SerializeField] private int quantidadeJogadores = 2;
+    [Header("Lobby Camera")]
+    public Camera mainCamera;
 
-    public NetworkVariable<bool> partidaComecou =
+    public NetworkVariable<bool> GameStarted =
         new NetworkVariable<bool>(false);
 
-    public NetworkVariable<int> jogadores =
+    public NetworkVariable<int> Players =
         new NetworkVariable<int>(0);
-
-    private bool iniciandoPartida = false;
 
     private void Awake()
     {
@@ -34,234 +32,184 @@ public class MultiplayerManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        jogadores.OnValueChanged += AtualizarTextoJogadores;
-        partidaComecou.OnValueChanged += PartidaComecou;
+        base.OnNetworkSpawn();
+
+        Players.OnValueChanged += OnPlayersChanged;
+        GameStarted.OnValueChanged += OnGameStarted;
 
         if (IsServer)
         {
             NetworkManager.Singleton.OnClientConnectedCallback +=
-                JogadorEntrou;
+                OnClientConnected;
 
             NetworkManager.Singleton.OnClientDisconnectCallback +=
-                JogadorSaiu;
+                OnClientDisconnected;
 
-            jogadores.Value =
-                NetworkManager.Singleton.ConnectedClientsList.Count;
+            Players.Value =
+                NetworkManager.Singleton.ConnectedClients.Count;
+
+            // Coloca o servidor no Spawn 1
+            StartCoroutine(PosicionarJogadorDepoisDoSpawn(
+                NetworkManager.Singleton.LocalClientId
+            ));
         }
 
-        if (waitingPanel != null)
-        {
-            waitingPanel.SetActive(true);
-        }
+        AtualizarUI();
 
-        AtualizarTextoJogadores(
-            0,
-            jogadores.Value
-        );
+        if (mainCamera != null)
+            mainCamera.enabled = true;
     }
 
-    private void OnDestroy()
-    {
-        if (NetworkManager.Singleton == null)
-            return;
-
-        NetworkManager.Singleton.OnClientConnectedCallback -=
-            JogadorEntrou;
-
-        NetworkManager.Singleton.OnClientDisconnectCallback -=
-            JogadorSaiu;
-    }
-
-    // =====================================================
-    // JOGADOR ENTROU
-    // =====================================================
-
-    private void JogadorEntrou(ulong clientId)
+    private void OnClientConnected(ulong clientId)
     {
         if (!IsServer)
             return;
 
-        jogadores.Value =
-            NetworkManager.Singleton.ConnectedClientsList.Count;
+        Players.Value =
+            NetworkManager.Singleton.ConnectedClients.Count;
 
-        Debug.Log(
-            "Jogador entrou: " + clientId
-        );
+        StartCoroutine(PosicionarJogadorDepoisDoSpawn(clientId));
 
-        // Coloca cada jogador no seu Spawn
-        PosicionarJogadores();
-
-        // Se tiver 2 jogadores, começa a partida
-        if (jogadores.Value >= quantidadeJogadores &&
-            !iniciandoPartida &&
-            !partidaComecou.Value)
+        if (Players.Value >= 2 && !GameStarted.Value)
         {
             StartCoroutine(IniciarPartida());
         }
     }
 
-    // =====================================================
-    // JOGADOR SAIU
-    // =====================================================
-
-    private void JogadorSaiu(ulong clientId)
+    private void OnClientDisconnected(ulong clientId)
     {
         if (!IsServer)
             return;
 
-        jogadores.Value =
-            NetworkManager.Singleton.ConnectedClientsList.Count;
+        Players.Value =
+            NetworkManager.Singleton.ConnectedClients.Count;
+
+        GameStarted.Value = false;
+    }
+
+    private IEnumerator PosicionarJogadorDepoisDoSpawn(ulong clientId)
+    {
+        // Espera o PlayerObject realmente existir
+        yield return new WaitForSeconds(0.2f);
+
+        if (!NetworkManager.Singleton.ConnectedClients
+            .TryGetValue(clientId, out NetworkClient client))
+        {
+            yield break;
+        }
+
+        if (client.PlayerObject == null)
+        {
+            yield break;
+        }
+
+        Transform jogador = client.PlayerObject.transform;
+
+        Transform spawn;
+
+        if (clientId == NetworkManager.ServerClientId)
+        {
+            spawn = player1Spawn;
+            Debug.Log("PLAYER 1 -> SPAWN 1");
+        }
+        else
+        {
+            spawn = player2Spawn;
+            Debug.Log("PLAYER 2 -> SPAWN 2");
+        }
+
+        if (spawn == null)
+        {
+            Debug.LogError("Spawn Point não foi configurado!");
+            yield break;
+        }
+
+        // O servidor define a posição
+        jogador.SetPositionAndRotation(
+            spawn.position,
+            spawn.rotation
+        );
 
         Debug.Log(
-            "Jogador saiu: " + clientId
+            "Jogador " + clientId +
+            " colocado em " +
+            jogador.position
         );
     }
 
-    // =====================================================
-    // POSICIONAR JOGADORES
-    // =====================================================
-
-    private void PosicionarJogadores()
-    {
-        if (!IsServer)
-            return;
-
-        int index = 0;
-
-        foreach (var client in
-                 NetworkManager.Singleton.ConnectedClientsList)
-        {
-            if (client.PlayerObject == null)
-                continue;
-
-            Transform jogador =
-                client.PlayerObject.transform;
-
-            // PLAYER 1
-            if (index == 0)
-            {
-                if (player1Spawn != null)
-                {
-                    jogador.position =
-                        player1Spawn.position;
-
-                    jogador.rotation =
-                        player1Spawn.rotation;
-
-                    Debug.Log(
-                        "Player 1 colocado no Spawn 1"
-                    );
-                }
-            }
-
-            // PLAYER 2
-            else if (index == 1)
-            {
-                if (player2Spawn != null)
-                {
-                    jogador.position =
-                        player2Spawn.position;
-
-                    jogador.rotation =
-                        player2Spawn.rotation;
-
-                    Debug.Log(
-                        "Player 2 colocado no Spawn 2"
-                    );
-                }
-            }
-
-            index++;
-        }
-    }
-
-    // =====================================================
-    // INICIAR PARTIDA
-    // =====================================================
-
     private IEnumerator IniciarPartida()
     {
-        iniciandoPartida = true;
-
         CountdownClientRpc("3");
-
         yield return new WaitForSeconds(1f);
 
         CountdownClientRpc("2");
-
         yield return new WaitForSeconds(1f);
 
         CountdownClientRpc("1");
-
         yield return new WaitForSeconds(1f);
 
         CountdownClientRpc("GO!");
-
         yield return new WaitForSeconds(1f);
 
-        partidaComecou.Value = true;
+        GameStarted.Value = true;
 
-        iniciandoPartida = false;
+        DesativarMainCameraClientRpc();
     }
 
-    // =====================================================
-    // ATUALIZAR TEXTO
-    // =====================================================
+    [ClientRpc]
+    private void DesativarMainCameraClientRpc()
+    {
+        if (mainCamera != null)
+        {
+            mainCamera.enabled = false;
+        }
+    }
 
-    private void AtualizarTextoJogadores(
-        int valorAntigo,
-        int valorNovo)
+    [ClientRpc]
+    private void CountdownClientRpc(string texto)
+    {
+        if (countdownText != null)
+            countdownText.text = texto;
+    }
+
+    private void OnPlayersChanged(int antigo, int novo)
+    {
+        AtualizarUI();
+    }
+
+    private void OnGameStarted(bool antigo, bool novo)
+    {
+        AtualizarUI();
+    }
+
+    private void AtualizarUI()
     {
         if (playersText != null)
         {
             playersText.text =
                 "Jogadores: " +
-                valorNovo +
-                "/" +
-                quantidadeJogadores;
+                Players.Value +
+                "/2";
         }
-    }
 
-    // =====================================================
-    // PARTIDA COMEÇOU
-    // =====================================================
-
-    private void PartidaComecou(
-        bool valorAntigo,
-        bool valorNovo)
-    {
         if (waitingPanel != null)
         {
-            waitingPanel.SetActive(!valorNovo);
-        }
-
-        if (valorNovo &&
-            countdownText != null)
-        {
-            countdownText.text = "";
+            waitingPanel.SetActive(!GameStarted.Value);
         }
     }
 
-    // =====================================================
-    // CONTAGEM REGRESSIVA
-    // =====================================================
-
-    [ClientRpc]
-    private void CountdownClientRpc(
-        string texto)
+    private void OnDestroy()
     {
-        if (countdownText != null)
+        if (NetworkManager.Singleton != null && IsServer)
         {
-            countdownText.text = texto;
+            NetworkManager.Singleton.OnClientConnectedCallback -=
+                OnClientConnected;
+
+            NetworkManager.Singleton.OnClientDisconnectCallback -=
+                OnClientDisconnected;
         }
-    }
 
-    // =====================================================
-    // VERIFICAR SE PODE JOGAR
-    // =====================================================
-
-    public bool PodeJogar()
-    {
-        return partidaComecou.Value;
+        Players.OnValueChanged -= OnPlayersChanged;
+        GameStarted.OnValueChanged -= OnGameStarted;
     }
 }
