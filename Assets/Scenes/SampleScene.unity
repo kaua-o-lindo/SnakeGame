@@ -4325,7 +4325,8 @@ MonoBehaviour:
     NetworkTransport: {fileID: 943322233}
     PlayerPrefab: {fileID: 8260893832459066258, guid: 35bd56b0c5e50924f99961aa538a76cb, type: 3}
     Prefabs:
-      NetworkPrefabsLists: []
+      NetworkPrefabsLists:
+      - {fileID: 11400000, guid: e1f7f65a3420a264997e6ec65ddffbc8, type: 2}
     TickRate: 30
     ClientConnectionBufferTimeout: 10
     ConnectionApproval: 0
@@ -5295,8 +5296,8 @@ MonoBehaviour:
   waitingPanel: {fileID: 889857217}
   playersText: {fileID: 696270931}
   countdownText: {fileID: 95005669}
-  player1Spawn: {fileID: 0}
-  player2Spawn: {fileID: 0}
+  player1Spawn: {fileID: 661014441}
+  player2Spawn: {fileID: 1596033805}
   mainCamera: {fileID: 2121120251}
   GameStarted:
     UpdateTraits:

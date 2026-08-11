@@ -33,11 +33,16 @@ public class PlayerCamera : NetworkBehaviour
         // Cada computador controla somente sua própria câmera.
         if (!IsOwner)
         {
-            DesativarCamera();
+           DesativarCamera();
             return;
         }
+        else 
+        {
+           // AtivarCamera();
+        }
 
-        DesativarCamera();
+
+            DesativarCamera();
     }
 
     public void AtivarCamera()
