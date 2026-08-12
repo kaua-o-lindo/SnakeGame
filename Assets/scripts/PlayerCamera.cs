@@ -1,12 +1,12 @@
-using Unity.Netcode;
 using UnityEngine;
+using Unity.Netcode;
 
 public class PlayerCamera : NetworkBehaviour
 {
-    [Header("Configuração")]
-    public float altura = 8f;
-    public float distancia = 12f;
-    public float suavidade = 5f;
+    [Header("Camera Settings")]
+    [SerializeField] private float altura = 8f;
+    [SerializeField] private float distancia = 12f;
+    [SerializeField] private float suavidade = 5f;
 
     private Camera minhaCamera;
     private AudioListener meuAudioListener;
@@ -18,7 +18,8 @@ public class PlayerCamera : NetworkBehaviour
         minhaCamera = GetComponent<Camera>();
         meuAudioListener = GetComponent<AudioListener>();
 
-        // Começa desligada.
+        // Toda câmera começa desligada.
+        // Depois o jogador dono dela será ativado.
         if (minhaCamera != null)
             minhaCamera.enabled = false;
 
@@ -30,19 +31,21 @@ public class PlayerCamera : NetworkBehaviour
     {
         base.OnNetworkSpawn();
 
-        // Cada computador controla somente sua própria câmera.
+        // Esta câmera NÃO pertence a este jogador.
+        // Portanto permanece desligada.
         if (!IsOwner)
         {
-           DesativarCamera();
+            DesativarCamera();
             return;
         }
-        else 
-        {
-           // AtivarCamera();
-        }
 
+        // Esta é a câmera do jogador local.
+        AtivarCamera();
 
-            DesativarCamera();
+        Debug.Log(
+            "Câmera ativada para o jogador: " +
+            OwnerClientId
+        );
     }
 
     public void AtivarCamera()
@@ -57,10 +60,6 @@ public class PlayerCamera : NetworkBehaviour
 
         if (meuAudioListener != null)
             meuAudioListener.enabled = true;
-
-        Debug.Log(
-            "Câmera ativada para jogador: " + OwnerClientId
-        );
     }
 
     public void DesativarCamera()
@@ -76,6 +75,7 @@ public class PlayerCamera : NetworkBehaviour
 
     private void LateUpdate()
     {
+        // Só o dono controla essa câmera.
         if (!IsOwner)
             return;
 
@@ -85,17 +85,25 @@ public class PlayerCamera : NetworkBehaviour
         if (minhaCamera == null)
             return;
 
-        Vector3 alvo = transform.parent != null
-            ? transform.parent.position
-            : transform.position;
+        Transform jogador = transform.parent;
 
+        if (jogador == null)
+            jogador = transform.root;
+
+        if (jogador == null)
+            return;
+
+        // Posição da cobra
+        Vector3 alvo = jogador.position;
+
+        // Mantém a câmera acima e atrás da cobra.
         Vector3 posicaoDesejada =
-            alvo + Vector3.up * altura;
+            alvo
+            + Vector3.up * altura
+            - jogador.forward * distancia;
 
-        posicaoDesejada -=
-            transform.parent != null
-            ? transform.parent.forward * distancia
-            : Vector3.forward * distancia;
+        // Mantém a câmera no mesmo nível vertical configurado.
+        posicaoDesejada.y = alvo.y + altura;
 
         transform.position = Vector3.Lerp(
             transform.position,
@@ -103,6 +111,20 @@ public class PlayerCamera : NetworkBehaviour
             suavidade * Time.deltaTime
         );
 
-        transform.LookAt(alvo);
+        // Olha para a cobra.
+        Vector3 direcao =
+            alvo - transform.position;
+
+        if (direcao.sqrMagnitude > 0.001f)
+        {
+            Quaternion rotacaoDesejada =
+                Quaternion.LookRotation(direcao);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                rotacaoDesejada,
+                suavidade * Time.deltaTime
+            );
+        }
     }
 }

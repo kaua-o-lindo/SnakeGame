@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 2392285295834644372}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.3417441, z: -0, w: 0.9397931}
-  m_LocalPosition: {x: 5.05, y: 16.107, z: -29.078}
+  m_LocalPosition: {x: 0.7664218, y: 0, z: 0.6423365}
   m_LocalScale: {x: 0.80895346, y: 0.16207501, z: 0.25153965}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -140,7 +140,7 @@ Transform:
   m_GameObject: {fileID: 3020165217723573577}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.3499183, z: -0, w: 0.9367802}
-  m_LocalPosition: {x: 5.119, y: 16.107, z: -29.553}
+  m_LocalPosition: {x: -0.7551147, y: 0, z: 0.655592}
   m_LocalScale: {x: 0.80895346, y: 0.16207501, z: 0.25153965}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -252,7 +252,7 @@ Transform:
   m_GameObject: {fileID: 5698737093083350474}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4.3638, y: 16.1732, z: -29.3215}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.1559781, y: 1.1300099, z: 1.2427849}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -361,7 +361,7 @@ Transform:
   m_GameObject: {fileID: 6340380677686854280}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.011822168, z: 0, w: 0.99993014}
-  m_LocalPosition: {x: 6.6620393, y: -15.53651, z: 178.81354}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.0000001, y: 1, z: 1.0000001}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -396,7 +396,7 @@ Transform:
   m_GameObject: {fileID: 6779691907194844082}
   serializedVersion: 2
   m_LocalRotation: {x: 0.50368613, y: 0.01021277, z: -0.0059550777, w: 0.8638059}
-  m_LocalPosition: {x: -11.733, y: 41.034, z: -214.375}
+  m_LocalPosition: {x: 1.0249691, y: 18.243633, z: -13.280926}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -566,7 +566,7 @@ MonoBehaviour:
   RotationMaxInterpolationTime: 0.1
   ScaleLerpSmoothing: 1
   ScaleMaxInterpolationTime: 0.1
-  AuthorityMode: 0
+  AuthorityMode: 1
   TickSyncChildren: 0
   UseUnreliableDeltas: 0
   SyncPositionX: 1

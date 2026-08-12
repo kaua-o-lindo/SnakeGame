@@ -125,10 +125,10 @@ public class MultiplayerManager : NetworkBehaviour
         }
 
         // O servidor define a posição
-        jogador.SetPositionAndRotation(
-            spawn.position,
-            spawn.rotation
-        );
+        //jogador.SetPositionAndRotation(
+          //  spawn.position,
+          //  spawn.rotation
+        //);
 
         Debug.Log(
             "Jogador " + clientId +
