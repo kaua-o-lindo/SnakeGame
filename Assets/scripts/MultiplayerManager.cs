@@ -47,17 +47,15 @@ public class MultiplayerManager : NetworkBehaviour
 
             Players.Value =
                 NetworkManager.Singleton.ConnectedClients.Count;
-
-            // Coloca o servidor no Spawn 1
-            StartCoroutine(PosicionarJogadorDepoisDoSpawn(
-                NetworkManager.Singleton.LocalClientId
-            ));
         }
 
         AtualizarUI();
 
+        // A câmera do lobby começa ligada
         if (mainCamera != null)
+        {
             mainCamera.enabled = true;
+        }
     }
 
     private void OnClientConnected(ulong clientId)
@@ -67,8 +65,6 @@ public class MultiplayerManager : NetworkBehaviour
 
         Players.Value =
             NetworkManager.Singleton.ConnectedClients.Count;
-
-        StartCoroutine(PosicionarJogadorDepoisDoSpawn(clientId));
 
         if (Players.Value >= 2 && !GameStarted.Value)
         {
@@ -85,102 +81,151 @@ public class MultiplayerManager : NetworkBehaviour
             NetworkManager.Singleton.ConnectedClients.Count;
 
         GameStarted.Value = false;
-    }
 
-    private IEnumerator PosicionarJogadorDepoisDoSpawn(ulong clientId)
-    {
-        // Espera o PlayerObject realmente existir
-        yield return new WaitForSeconds(0.2f);
-
-        if (!NetworkManager.Singleton.ConnectedClients
-            .TryGetValue(clientId, out NetworkClient client))
-        {
-            yield break;
-        }
-
-        if (client.PlayerObject == null)
-        {
-            yield break;
-        }
-
-        Transform jogador = client.PlayerObject.transform;
-
-        Transform spawn;
-
-        if (clientId == NetworkManager.ServerClientId)
-        {
-            spawn = player1Spawn;
-            Debug.Log("PLAYER 1 -> SPAWN 1");
-        }
-        else
-        {
-            spawn = player2Spawn;
-            Debug.Log("PLAYER 2 -> SPAWN 2");
-        }
-
-        if (spawn == null)
-        {
-            Debug.LogError("Spawn Point não foi configurado!");
-            yield break;
-        }
-
-        // O servidor define a posição
-        //jogador.SetPositionAndRotation(
-          //  spawn.position,
-          //  spawn.rotation
-        //);
-
-        Debug.Log(
-            "Jogador " + clientId +
-            " colocado em " +
-            jogador.position
-        );
+        // Se alguém sair antes da partida,
+        // a UI volta a aparecer.
+        MostrarUILobbyClientRpc();
     }
 
     private IEnumerator IniciarPartida()
     {
+        // =========================
+        // 3
+        // =========================
+
         CountdownClientRpc("3");
+
         yield return new WaitForSeconds(1f);
+
+
+        // =========================
+        // 2
+        // =========================
 
         CountdownClientRpc("2");
+
         yield return new WaitForSeconds(1f);
+
+
+        // =========================
+        // 1
+        // =========================
 
         CountdownClientRpc("1");
+
         yield return new WaitForSeconds(1f);
 
+
+        // =========================
+        // GO!
+        // =========================
+
         CountdownClientRpc("GO!");
+
         yield return new WaitForSeconds(1f);
+
+
+        // =========================
+        // COMEÇA A PARTIDA
+        // =========================
 
         GameStarted.Value = true;
 
-        DesativarMainCameraClientRpc();
+        // Esconde a UI e desliga a câmera do lobby
+        EsconderLobbyClientRpc();
     }
 
-    [ClientRpc]
-    private void DesativarMainCameraClientRpc()
-    {
-        if (mainCamera != null)
-        {
-            mainCamera.enabled = false;
-        }
-    }
+    // =========================================================
+    // CONTAGEM
+    // =========================================================
 
     [ClientRpc]
     private void CountdownClientRpc(string texto)
     {
         if (countdownText != null)
+        {
             countdownText.text = texto;
+        }
     }
+
+
+    // =========================================================
+    // ESCONDER LOBBY
+    // =========================================================
+
+    [ClientRpc]
+    private void EsconderLobbyClientRpc()
+    {
+        // Desliga o painel inteiro
+        // Aqui ficam Create / Join / código / jogadores etc.
+        if (waitingPanel != null)
+        {
+            waitingPanel.SetActive(false);
+        }
+
+        // Desliga a câmera que mostra o cenário do lobby
+        if (mainCamera != null)
+        {
+            mainCamera.enabled = false;
+        }
+
+        // Limpa o texto do contador
+        if (countdownText != null)
+        {
+            countdownText.text = "";
+        }
+
+        Debug.Log("LOBBY ESCONDIDO - PARTIDA COMEÇOU!");
+    }
+
+
+    // =========================================================
+    // MOSTRAR LOBBY NOVAMENTE
+    // =========================================================
+
+    [ClientRpc]
+    private void MostrarUILobbyClientRpc()
+    {
+        if (waitingPanel != null)
+        {
+            waitingPanel.SetActive(true);
+        }
+
+        if (mainCamera != null)
+        {
+            mainCamera.enabled = true;
+        }
+
+        if (countdownText != null)
+        {
+            countdownText.text = "";
+        }
+    }
+
+
+    // =========================================================
+    // JOGADORES MUDARAM
+    // =========================================================
 
     private void OnPlayersChanged(int antigo, int novo)
     {
         AtualizarUI();
     }
 
+
+    // =========================================================
+    // ESTADO DA PARTIDA MUDOU
+    // =========================================================
+
     private void OnGameStarted(bool antigo, bool novo)
     {
         AtualizarUI();
     }
+
+
+    // =========================================================
+    // ATUALIZAR UI
+    // =========================================================
 
     private void AtualizarUI()
     {
@@ -197,6 +242,21 @@ public class MultiplayerManager : NetworkBehaviour
             waitingPanel.SetActive(!GameStarted.Value);
         }
     }
+
+
+    // =========================================================
+    // VERIFICAR SE PODE JOGAR
+    // =========================================================
+
+    public bool PodeJogar()
+    {
+        return GameStarted.Value;
+    }
+
+
+    // =========================================================
+    // LIMPEZA
+    // =========================================================
 
     private void OnDestroy()
     {

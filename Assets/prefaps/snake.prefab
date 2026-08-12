@@ -489,7 +489,6 @@ GameObject:
   - component: {fileID: 7064580150238891337}
   - component: {fileID: 5859460738331884775}
   - component: {fileID: 1348220406530328916}
-  - component: {fileID: -2096560674160179323}
   m_Layer: 0
   m_Name: snake
   m_TagString: Untagged
@@ -506,7 +505,7 @@ Transform:
   m_GameObject: {fileID: 8260893832459066258}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.011822168, z: -0, w: 0.99993014}
-  m_LocalPosition: {x: -11.308689, y: 15.53651, z: 21.411383}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -603,34 +602,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 5
   rotationSpeed: 180
-  bodyDistance: 1.2
+  bodyDistance: 1.19
   bodySmooth: 10
   bodyPrefab: {fileID: 8172366037316618342, guid: 0e6d256489ff03745a3a52ff65a84f88, type: 3}
   appleSpawner: {fileID: 0}
---- !u!54 &-2096560674160179323
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8260893832459066258}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
+  alturaMinima: -5

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
+using TMPro;
 
 public class MovimentoSnake : NetworkBehaviour
 {
@@ -16,28 +17,88 @@ public class MovimentoSnake : NetworkBehaviour
     [Header("References")]
     public AppleSpawner appleSpawner;
 
+    [Header("Score")]
+    public TMP_Text scoreText;
+
+    [Header("Gravity")]
+    public float alturaMinima = -5f;
+
     private List<Transform> bodyParts =
         new List<Transform>();
 
     private NetworkVariable<bool> alive =
         new NetworkVariable<bool>(true);
 
+    private NetworkVariable<int> appleCount =
+        new NetworkVariable<int>(0);
+
     private bool initialized = false;
 
-    private float fixedY;
+    private Rigidbody rb;
+
+
+    // =========================================================
+    // AWAKE
+    // =========================================================
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();
+        }
+
+        // Ativa a gravidade
+        rb.useGravity = true;
+
+        // A física será controlada pelo Rigidbody
+        rb.isKinematic = false;
+
+        // A cobra não pode tombar
+        rb.constraints =
+            RigidbodyConstraints.FreezeRotationX |
+            RigidbodyConstraints.FreezeRotationZ;
+    }
+
+
+    // =========================================================
+    // NETWORK SPAWN
+    // =========================================================
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
+        // Quando a quantidade de maçãs mudar,
+        // atualiza o texto.
+        appleCount.OnValueChanged += OnAppleCountChanged;
+
+        // Somente o dono controla sua própria cobra
         if (!IsOwner)
             return;
 
-        // Guarda a altura recebida do Spawn Point
-        fixedY = transform.position.y;
+        // Garante que a gravidade esteja ativada
+        if (rb != null)
+        {
+            rb.useGravity = true;
+            rb.isKinematic = false;
+
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
 
         Initialize();
+
+        // Atualiza o texto inicialmente
+        UpdateScoreText(appleCount.Value);
     }
+
+
+    // =========================================================
+    // INITIALIZE
+    // =========================================================
 
     private void Initialize()
     {
@@ -48,14 +109,20 @@ public class MovimentoSnake : NetworkBehaviour
 
         bodyParts.Clear();
 
-        // O próprio Snake é a cabeça
+        // A própria Snake é a cabeça
         bodyParts.Add(transform);
 
+        // Cria duas partes iniciais
         for (int i = 0; i < 2; i++)
         {
             GrowLocal();
         }
     }
+
+
+    // =========================================================
+    // UPDATE
+    // =========================================================
 
     private void Update()
     {
@@ -65,6 +132,7 @@ public class MovimentoSnake : NetworkBehaviour
         if (!alive.Value)
             return;
 
+        // Espera o GO para começar a andar
         if (MultiplayerManager.Instance != null)
         {
             if (!MultiplayerManager.Instance.GameStarted.Value)
@@ -72,7 +140,15 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
         Move();
+
+        // Verifica se caiu da plataforma
+        VerificarQueda();
     }
+
+
+    // =========================================================
+    // FIXED UPDATE
+    // =========================================================
 
     private void FixedUpdate()
     {
@@ -83,20 +159,19 @@ public class MovimentoSnake : NetworkBehaviour
             return;
 
         UpdateBody();
-
-        // Mantém a cabeça exatamente na altura do Spawn
-        Vector3 pos = transform.position;
-
-        pos.y = fixedY;
-
-        transform.position = pos;
     }
+
+
+    // =========================================================
+    // MOVIMENTO
+    // =========================================================
 
     private void Move()
     {
         float horizontal =
             Input.GetAxis("Horizontal");
 
+        // Rotação somente no eixo Y
         transform.Rotate(
             Vector3.up,
             horizontal *
@@ -109,11 +184,36 @@ public class MovimentoSnake : NetworkBehaviour
             moveSpeed *
             Time.deltaTime;
 
-        // Movimento SOMENTE no X/Z
+        // Não aplicamos movimento vertical manualmente.
+        // O Rigidbody cuida da gravidade.
         movimento.y = 0f;
 
         transform.position += movimento;
     }
+
+
+    // =========================================================
+    // VERIFICAR QUEDA
+    // =========================================================
+
+    private void VerificarQueda()
+    {
+        if (transform.position.y <= alturaMinima)
+        {
+            Debug.Log(
+                "Snake " +
+                OwnerClientId +
+                " caiu da plataforma!"
+            );
+
+            DieServerRpc();
+        }
+    }
+
+
+    // =========================================================
+    // CORPO DA COBRA
+    // =========================================================
 
     private void UpdateBody()
     {
@@ -148,6 +248,11 @@ public class MovimentoSnake : NetworkBehaviour
         }
     }
 
+
+    // =========================================================
+    // CRESCER COBRA
+    // =========================================================
+
     private void GrowLocal()
     {
         if (bodyPrefab == null)
@@ -160,7 +265,9 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
         Transform lastPart =
-            bodyParts[bodyParts.Count - 1];
+            bodyParts[
+                bodyParts.Count - 1
+            ];
 
         Vector3 position =
             lastPart.position -
@@ -181,6 +288,21 @@ public class MovimentoSnake : NetworkBehaviour
         );
     }
 
+
+    // =========================================================
+    // ADICIONAR BODY
+    // =========================================================
+
+    private void AddBody()
+    {
+        GrowLocal();
+    }
+
+
+    // =========================================================
+    // COLISÕES
+    // =========================================================
+
     private void OnTriggerEnter(Collider other)
     {
         if (!IsOwner)
@@ -189,11 +311,21 @@ public class MovimentoSnake : NetworkBehaviour
         if (!alive.Value)
             return;
 
+
+        // -----------------------------------------
+        // PAREDE
+        // -----------------------------------------
+
         if (other.CompareTag("Wall"))
         {
             DieServerRpc();
             return;
         }
+
+
+        // -----------------------------------------
+        // OUTRA COBRA
+        // -----------------------------------------
 
         if (other.CompareTag("Snake") ||
             other.CompareTag("SnakeBody"))
@@ -201,6 +333,11 @@ public class MovimentoSnake : NetworkBehaviour
             DieServerRpc();
             return;
         }
+
+
+        // -----------------------------------------
+        // MAÇÃ
+        // -----------------------------------------
 
         if (other.CompareTag("Apple"))
         {
@@ -216,6 +353,11 @@ public class MovimentoSnake : NetworkBehaviour
         }
     }
 
+
+    // =========================================================
+    // COMER MAÇÃ
+    // =========================================================
+
     [ServerRpc]
     private void EatAppleServerRpc(
         ulong appleId)
@@ -230,13 +372,65 @@ public class MovimentoSnake : NetworkBehaviour
             return;
         }
 
+        // Remove a maçã
         apple.Despawn(true);
 
+        // Aumenta a contagem
+        appleCount.Value++;
+
+        // Avisa o dono para adicionar o Body
+        AddBodyClientRpc();
+
+        // Cria outra maçã
         if (appleSpawner != null)
         {
             appleSpawner.SpawnApple();
         }
     }
+
+
+    // =========================================================
+    // ADICIONAR BODY NO CLIENTE
+    // =========================================================
+
+    [ClientRpc]
+    private void AddBodyClientRpc()
+    {
+        if (!IsOwner)
+            return;
+
+        AddBody();
+    }
+
+
+    // =========================================================
+    // CONTAGEM DE MAÇÃS
+    // =========================================================
+
+    private void OnAppleCountChanged(
+        int oldValue,
+        int newValue)
+    {
+        if (!IsOwner)
+            return;
+
+        UpdateScoreText(newValue);
+    }
+
+
+    private void UpdateScoreText(int value)
+    {
+        if (scoreText != null)
+        {
+            scoreText.text =
+                "Maçãs: " + value;
+        }
+    }
+
+
+    // =========================================================
+    // MORRER
+    // =========================================================
 
     [ServerRpc]
     private void DieServerRpc()
@@ -249,6 +443,11 @@ public class MovimentoSnake : NetworkBehaviour
         DieClientRpc();
     }
 
+
+    // =========================================================
+    // MORTE NOS CLIENTES
+    // =========================================================
+
     [ClientRpc]
     private void DieClientRpc()
     {
@@ -257,6 +456,25 @@ public class MovimentoSnake : NetworkBehaviour
             OwnerClientId
         );
 
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
         enabled = false;
     }
+
+
+    // =========================================================
+    // NETWORK DESPAWN
+    // =========================================================
+
+    public override void OnNetworkDespawn()
+    {
+        appleCount.OnValueChanged -= OnAppleCountChanged;
+
+        base.OnNetworkDespawn();
+    }
 }
+
