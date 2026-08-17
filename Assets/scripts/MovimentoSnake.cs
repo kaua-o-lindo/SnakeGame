@@ -23,18 +23,43 @@ public class MovimentoSnake : NetworkBehaviour
     [Header("Gravity")]
     public float alturaMinima = -5f;
 
-    private List<Transform> bodyParts =
+    [Header("Game Over")]
+    public float tempoAntesDeVoltar = 1.5f;
+
+    // =========================================================
+    // CORPO
+    // =========================================================
+
+    private readonly List<Transform> bodyParts =
         new List<Transform>();
 
+    // =========================================================
+    // NETWORK VARIABLES
+    // =========================================================
+
     private NetworkVariable<bool> alive =
-        new NetworkVariable<bool>(true);
+        new NetworkVariable<bool>(
+            true,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server
+        );
 
     private NetworkVariable<int> appleCount =
-        new NetworkVariable<int>(0);
+        new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server
+        );
+
+    // =========================================================
+    // VARIÁVEIS
+    // =========================================================
 
     private bool initialized = false;
 
     private Rigidbody rb;
+
+    private bool voltandoAoMenu = false;
 
 
     // =========================================================
@@ -50,13 +75,9 @@ public class MovimentoSnake : NetworkBehaviour
             rb = gameObject.AddComponent<Rigidbody>();
         }
 
-        // Ativa a gravidade
         rb.useGravity = true;
-
-        // A física será controlada pelo Rigidbody
         rb.isKinematic = false;
 
-        // A cobra não pode tombar
         rb.constraints =
             RigidbodyConstraints.FreezeRotationX |
             RigidbodyConstraints.FreezeRotationZ;
@@ -71,15 +92,14 @@ public class MovimentoSnake : NetworkBehaviour
     {
         base.OnNetworkSpawn();
 
-        // Quando a quantidade de maçãs mudar,
-        // atualiza o texto.
-        appleCount.OnValueChanged += OnAppleCountChanged;
+        appleCount.OnValueChanged +=
+            OnAppleCountChanged;
 
-        // Somente o dono controla sua própria cobra
+        UpdateScoreText(appleCount.Value);
+
         if (!IsOwner)
             return;
 
-        // Garante que a gravidade esteja ativada
         if (rb != null)
         {
             rb.useGravity = true;
@@ -90,9 +110,6 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
         Initialize();
-
-        // Atualiza o texto inicialmente
-        UpdateScoreText(appleCount.Value);
     }
 
 
@@ -113,10 +130,109 @@ public class MovimentoSnake : NetworkBehaviour
         bodyParts.Add(transform);
 
         // Cria duas partes iniciais
-        for (int i = 0; i < 2; i++)
+        CreateInitialBodyServerRpc(2);
+    }
+
+
+    // =========================================================
+    // CRIAR CORPO INICIAL
+    // =========================================================
+
+    [ServerRpc]
+    private void CreateInitialBodyServerRpc(
+        int amount,
+        ServerRpcParams rpcParams = default)
+    {
+        if (bodyPrefab == null)
         {
-            GrowLocal();
+            Debug.LogError(
+                "Body Prefab não foi configurado!"
+            );
+
+            return;
         }
+
+        ulong ownerId =
+            rpcParams.Receive.SenderClientId;
+
+        if (!NetworkManager.Singleton
+            .ConnectedClients
+            .TryGetValue(
+                ownerId,
+                out NetworkClient client))
+        {
+            return;
+        }
+
+        if (client.PlayerObject == null)
+            return;
+
+        MovimentoSnake snake =
+            client.PlayerObject
+            .GetComponent<MovimentoSnake>();
+
+        if (snake == null)
+            return;
+
+        List<NetworkObjectReference> references =
+            new List<NetworkObjectReference>();
+
+        Transform lastPart =
+            snake.transform;
+
+        for (int i = 0; i < amount; i++)
+        {
+            Vector3 position =
+                lastPart.position -
+                lastPart.forward *
+                snake.bodyDistance;
+
+            GameObject newPart =
+                Instantiate(
+                    snake.bodyPrefab,
+                    position,
+                    lastPart.rotation
+                );
+
+            newPart.tag = "SnakeBody";
+
+            NetworkObject netObj =
+                newPart.GetComponent<NetworkObject>();
+
+            if (netObj == null)
+            {
+                Debug.LogError(
+                    "O BodyPrefab precisa ter NetworkObject!"
+                );
+
+                Destroy(newPart);
+
+                continue;
+            }
+
+            // A parte pertence ao jogador
+            netObj.SpawnWithOwnership(ownerId);
+
+            // Adiciona no servidor
+            snake.AddBodyPartServer(
+                newPart.transform
+            );
+
+            references.Add(
+                new NetworkObjectReference(
+                    netObj
+                )
+            );
+
+            lastPart =
+                newPart.transform;
+        }
+
+        // Apenas o dono adiciona as partes
+        // à sua própria lista
+        snake.AddInitialBodyOwnerClientRpc(
+            references.ToArray()
+        );
     }
 
 
@@ -132,16 +248,18 @@ public class MovimentoSnake : NetworkBehaviour
         if (!alive.Value)
             return;
 
-        // Espera o GO para começar a andar
+        // Espera o GO
         if (MultiplayerManager.Instance != null)
         {
-            if (!MultiplayerManager.Instance.GameStarted.Value)
+            if (!MultiplayerManager.Instance
+                .GameStarted.Value)
+            {
                 return;
+            }
         }
 
         Move();
 
-        // Verifica se caiu da plataforma
         VerificarQueda();
     }
 
@@ -171,7 +289,6 @@ public class MovimentoSnake : NetworkBehaviour
         float horizontal =
             Input.GetAxis("Horizontal");
 
-        // Rotação somente no eixo Y
         transform.Rotate(
             Vector3.up,
             horizontal *
@@ -184,8 +301,7 @@ public class MovimentoSnake : NetworkBehaviour
             moveSpeed *
             Time.deltaTime;
 
-        // Não aplicamos movimento vertical manualmente.
-        // O Rigidbody cuida da gravidade.
+        // A gravidade controla o Y
         movimento.y = 0f;
 
         transform.position += movimento;
@@ -193,37 +309,43 @@ public class MovimentoSnake : NetworkBehaviour
 
 
     // =========================================================
-    // VERIFICAR QUEDA
-    // =========================================================
-
-    private void VerificarQueda()
-    {
-        if (transform.position.y <= alturaMinima)
-        {
-            Debug.Log(
-                "Snake " +
-                OwnerClientId +
-                " caiu da plataforma!"
-            );
-
-            DieServerRpc();
-        }
-    }
-
-
-    // =========================================================
-    // CORPO DA COBRA
+    // MOVIMENTO DO CORPO
     // =========================================================
 
     private void UpdateBody()
     {
-        for (int i = 1; i < bodyParts.Count; i++)
+        if (!IsOwner)
+            return;
+
+        if (bodyParts.Count <= 1)
+            return;
+
+        for (int i = 1;
+             i < bodyParts.Count;
+             i++)
         {
             Transform current =
                 bodyParts[i];
 
+            if (current == null)
+                continue;
+
+            NetworkObject networkObject =
+                current.GetComponent<NetworkObject>();
+
+            if (networkObject == null)
+                continue;
+
+            // Somente o dono movimenta
+            // as próprias partes
+            if (!networkObject.IsOwner)
+                continue;
+
             Transform target =
                 bodyParts[i - 1];
+
+            if (target == null)
+                continue;
 
             Vector3 targetPosition =
                 target.position -
@@ -250,15 +372,46 @@ public class MovimentoSnake : NetworkBehaviour
 
 
     // =========================================================
+    // VERIFICAR QUEDA
+    // =========================================================
+
+    private void VerificarQueda()
+    {
+        if (transform.position.y <= alturaMinima)
+        {
+            Debug.Log(
+                "Snake " +
+                OwnerClientId +
+                " caiu da plataforma!"
+            );
+
+            DieServerRpc();
+        }
+    }
+
+
+    // =========================================================
     // CRESCER COBRA
     // =========================================================
 
     private void GrowLocal()
     {
+        if (!IsOwner)
+            return;
+
         if (bodyPrefab == null)
         {
             Debug.LogError(
                 "Body Prefab não foi configurado!"
+            );
+
+            return;
+        }
+
+        if (bodyParts.Count == 0)
+        {
+            Debug.LogError(
+                "bodyParts está vazio!"
             );
 
             return;
@@ -274,18 +427,175 @@ public class MovimentoSnake : NetworkBehaviour
             lastPart.forward *
             bodyDistance;
 
+        GrowServerRpc(
+            position,
+            lastPart.rotation
+        );
+    }
+
+
+    // =========================================================
+    // CRESCER NO SERVIDOR
+    // =========================================================
+
+    [ServerRpc]
+    private void GrowServerRpc(
+        Vector3 position,
+        Quaternion rotation,
+        ServerRpcParams rpcParams = default)
+    {
+        if (bodyPrefab == null)
+        {
+            Debug.LogError(
+                "Body Prefab não foi configurado!"
+            );
+
+            return;
+        }
+
+        ulong ownerId =
+            rpcParams.Receive.SenderClientId;
+
+        if (!NetworkManager.Singleton
+            .ConnectedClients
+            .TryGetValue(
+                ownerId,
+                out NetworkClient client))
+        {
+            return;
+        }
+
+        if (client.PlayerObject == null)
+            return;
+
+        MovimentoSnake snake =
+            client.PlayerObject
+            .GetComponent<MovimentoSnake>();
+
+        if (snake == null)
+            return;
+
         GameObject newPart =
             Instantiate(
                 bodyPrefab,
                 position,
-                lastPart.rotation
+                rotation
             );
 
         newPart.tag = "SnakeBody";
 
-        bodyParts.Add(
+        NetworkObject netObj =
+            newPart.GetComponent<NetworkObject>();
+
+        if (netObj == null)
+        {
+            Debug.LogError(
+                "O BodyPrefab precisa ter NetworkObject!"
+            );
+
+            Destroy(newPart);
+
+            return;
+        }
+
+        // Faz a parte existir para todos
+        netObj.SpawnWithOwnership(
+            ownerId
+        );
+
+        // Somente essa Snake recebe
+        // a parte na própria lista
+        snake.AddBodyPartServer(
             newPart.transform
         );
+
+        snake.AddBodyPartOwnerClientRpc(
+            new NetworkObjectReference(
+                netObj
+            )
+        );
+    }
+
+
+    // =========================================================
+    // ADICIONAR BODY NO SERVIDOR
+    // =========================================================
+
+    public void AddBodyPartServer(
+        Transform part)
+    {
+        if (!IsServer)
+            return;
+
+        if (part == null)
+            return;
+
+        if (!bodyParts.Contains(part))
+        {
+            bodyParts.Add(part);
+        }
+    }
+
+
+    // =========================================================
+    // ADICIONAR BODY SOMENTE NO DONO
+    // =========================================================
+
+    [ClientRpc]
+    private void AddBodyPartOwnerClientRpc(
+        NetworkObjectReference reference)
+    {
+        if (!IsOwner)
+            return;
+
+        if (!reference.TryGet(
+            out NetworkObject networkObject))
+        {
+            return;
+        }
+
+        Transform part =
+            networkObject.transform;
+
+        if (!bodyParts.Contains(part))
+        {
+            bodyParts.Add(part);
+        }
+    }
+
+
+    // =========================================================
+    // ADICIONAR CORPO INICIAL SOMENTE NO DONO
+    // =========================================================
+
+    [ClientRpc]
+    private void AddInitialBodyOwnerClientRpc(
+        NetworkObjectReference[] references)
+    {
+        if (!IsOwner)
+            return;
+
+        if (references == null)
+            return;
+
+        foreach (
+            NetworkObjectReference reference
+            in references)
+        {
+            if (!reference.TryGet(
+                out NetworkObject networkObject))
+            {
+                continue;
+            }
+
+            Transform part =
+                networkObject.transform;
+
+            if (!bodyParts.Contains(part))
+            {
+                bodyParts.Add(part);
+            }
+        }
     }
 
 
@@ -312,9 +622,9 @@ public class MovimentoSnake : NetworkBehaviour
             return;
 
 
-        // -----------------------------------------
+        // =====================================================
         // PAREDE
-        // -----------------------------------------
+        // =====================================================
 
         if (other.CompareTag("Wall"))
         {
@@ -323,9 +633,9 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
 
-        // -----------------------------------------
+        // =====================================================
         // OUTRA COBRA
-        // -----------------------------------------
+        // =====================================================
 
         if (other.CompareTag("Snake") ||
             other.CompareTag("SnakeBody"))
@@ -335,9 +645,9 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
 
-        // -----------------------------------------
+        // =====================================================
         // MAÇÃ
-        // -----------------------------------------
+        // =====================================================
 
         if (other.CompareTag("Apple"))
         {
@@ -372,13 +682,13 @@ public class MovimentoSnake : NetworkBehaviour
             return;
         }
 
-        // Remove a maçã
+        // Remove a maçã para todos
         apple.Despawn(true);
 
-        // Aumenta a contagem
+        // Soma a maçã desta Snake
         appleCount.Value++;
 
-        // Avisa o dono para adicionar o Body
+        // Faz somente esta Snake crescer
         AddBodyClientRpc();
 
         // Cria outra maçã
@@ -390,7 +700,7 @@ public class MovimentoSnake : NetworkBehaviour
 
 
     // =========================================================
-    // ADICIONAR BODY NO CLIENTE
+    // CRESCIMENTO NO DONO
     // =========================================================
 
     [ClientRpc]
@@ -404,7 +714,7 @@ public class MovimentoSnake : NetworkBehaviour
 
 
     // =========================================================
-    // CONTAGEM DE MAÇÃS
+    // SCORE
     // =========================================================
 
     private void OnAppleCountChanged(
@@ -423,8 +733,33 @@ public class MovimentoSnake : NetworkBehaviour
         if (scoreText != null)
         {
             scoreText.text =
-                "Maçãs: " + value;
+                "Maçãs: " +
+                value;
         }
+    }
+
+
+    // =========================================================
+    // MORRER POR OBSTÁCULO
+    // =========================================================
+
+    public void MorrerPorObstaculo()
+    {
+        // Somente o dono da Snake
+        // pode solicitar a própria morte.
+        if (!IsOwner)
+            return;
+
+        if (!alive.Value)
+            return;
+
+        Debug.Log(
+            "Snake " +
+            OwnerClientId +
+            " morreu ao tocar em um obstáculo!"
+        );
+
+        DieServerRpc();
     }
 
 
@@ -440,7 +775,14 @@ public class MovimentoSnake : NetworkBehaviour
 
         alive.Value = false;
 
+        // Avisa todos os jogadores
         DieClientRpc();
+
+        // Voltar ao menu depois de um tempo
+        Invoke(
+            nameof(VoltarTodosAoMenu),
+            tempoAntesDeVoltar
+        );
     }
 
 
@@ -458,11 +800,52 @@ public class MovimentoSnake : NetworkBehaviour
 
         if (rb != null)
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            rb.linearVelocity =
+                Vector3.zero;
+
+            rb.angularVelocity =
+                Vector3.zero;
         }
 
         enabled = false;
+    }
+
+
+    // =========================================================
+    // VOLTAR AO MENU
+    // =========================================================
+
+    private void VoltarTodosAoMenu()
+    {
+        if (!IsServer)
+            return;
+
+        if (voltandoAoMenu)
+            return;
+
+        voltandoAoMenu = true;
+
+        VoltarMenuClientRpc();
+    }
+
+
+    // =========================================================
+    // VOLTAR AO MENU NOS CLIENTES
+    // =========================================================
+
+    [ClientRpc]
+    private void VoltarMenuClientRpc()
+    {
+        if (VoltarAoMenu.Instance != null)
+        {
+            VoltarAoMenu.Instance.VoltarMenu();
+        }
+        else
+        {
+            Debug.LogError(
+                "VoltarAoMenu não foi encontrado na cena!"
+            );
+        }
     }
 
 
@@ -472,9 +855,9 @@ public class MovimentoSnake : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        appleCount.OnValueChanged -= OnAppleCountChanged;
+        appleCount.OnValueChanged -=
+            OnAppleCountChanged;
 
         base.OnNetworkDespawn();
     }
 }
-

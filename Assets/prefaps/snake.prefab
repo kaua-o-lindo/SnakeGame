@@ -491,7 +491,7 @@ GameObject:
   - component: {fileID: 1348220406530328916}
   m_Layer: 0
   m_Name: snake
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -606,4 +606,6 @@ MonoBehaviour:
   bodySmooth: 10
   bodyPrefab: {fileID: 8172366037316618342, guid: 0e6d256489ff03745a3a52ff65a84f88, type: 3}
   appleSpawner: {fileID: 0}
+  scoreText: {fileID: 0}
   alturaMinima: -5
+  tempoAntesDeVoltar: 1.5
