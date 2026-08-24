@@ -26,6 +26,10 @@ public class MovimentoSnake : NetworkBehaviour
     [Header("Game Over")]
     public float tempoAntesDeVoltar = 1.5f;
 
+    [Header("Game Over UI")]
+    public GameObject gameOverPanel;
+    public GameObject youWinPanel;
+
     // =========================================================
     // CORPO
     // =========================================================
@@ -96,6 +100,13 @@ public class MovimentoSnake : NetworkBehaviour
             OnAppleCountChanged;
 
         UpdateScoreText(appleCount.Value);
+
+        // Esconde as telas inicialmente
+        if (gameOverPanel != null)
+            gameOverPanel.SetActive(false);
+
+        if (youWinPanel != null)
+            youWinPanel.SetActive(false);
 
         if (!IsOwner)
             return;
@@ -210,10 +221,8 @@ public class MovimentoSnake : NetworkBehaviour
                 continue;
             }
 
-            // A parte pertence ao jogador
             netObj.SpawnWithOwnership(ownerId);
 
-            // Adiciona no servidor
             snake.AddBodyPartServer(
                 newPart.transform
             );
@@ -228,8 +237,6 @@ public class MovimentoSnake : NetworkBehaviour
                 newPart.transform;
         }
 
-        // Apenas o dono adiciona as partes
-        // à sua própria lista
         snake.AddInitialBodyOwnerClientRpc(
             references.ToArray()
         );
@@ -336,8 +343,6 @@ public class MovimentoSnake : NetworkBehaviour
             if (networkObject == null)
                 continue;
 
-            // Somente o dono movimenta
-            // as próprias partes
             if (!networkObject.IsOwner)
                 continue;
 
@@ -498,13 +503,10 @@ public class MovimentoSnake : NetworkBehaviour
             return;
         }
 
-        // Faz a parte existir para todos
         netObj.SpawnWithOwnership(
             ownerId
         );
 
-        // Somente essa Snake recebe
-        // a parte na própria lista
         snake.AddBodyPartServer(
             newPart.transform
         );
@@ -565,7 +567,7 @@ public class MovimentoSnake : NetworkBehaviour
 
 
     // =========================================================
-    // ADICIONAR CORPO INICIAL SOMENTE NO DONO
+    // ADICIONAR CORPO INICIAL
     // =========================================================
 
     [ClientRpc]
@@ -622,10 +624,7 @@ public class MovimentoSnake : NetworkBehaviour
             return;
 
 
-        // =====================================================
         // PAREDE
-        // =====================================================
-
         if (other.CompareTag("Wall"))
         {
             DieServerRpc();
@@ -633,10 +632,7 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
 
-        // =====================================================
         // OUTRA COBRA
-        // =====================================================
-
         if (other.CompareTag("Snake") ||
             other.CompareTag("SnakeBody"))
         {
@@ -645,10 +641,7 @@ public class MovimentoSnake : NetworkBehaviour
         }
 
 
-        // =====================================================
         // MAÇÃ
-        // =====================================================
-
         if (other.CompareTag("Apple"))
         {
             NetworkObject apple =
@@ -682,16 +675,12 @@ public class MovimentoSnake : NetworkBehaviour
             return;
         }
 
-        // Remove a maçã para todos
         apple.Despawn(true);
 
-        // Soma a maçã desta Snake
         appleCount.Value++;
 
-        // Faz somente esta Snake crescer
         AddBodyClientRpc();
 
-        // Cria outra maçã
         if (appleSpawner != null)
         {
             appleSpawner.SpawnApple();
@@ -745,8 +734,6 @@ public class MovimentoSnake : NetworkBehaviour
 
     public void MorrerPorObstaculo()
     {
-        // Somente o dono da Snake
-        // pode solicitar a própria morte.
         if (!IsOwner)
             return;
 
@@ -768,21 +755,152 @@ public class MovimentoSnake : NetworkBehaviour
     // =========================================================
 
     [ServerRpc]
-    private void DieServerRpc()
+    private void DieServerRpc(
+        ServerRpcParams rpcParams = default)
     {
         if (!alive.Value)
             return;
 
         alive.Value = false;
 
-        // Avisa todos os jogadores
+        // Quem morreu
+        ulong jogadorMorto =
+            rpcParams.Receive.SenderClientId;
+
+        Debug.Log(
+            "JOGADOR MORTO: " +
+            jogadorMorto
+        );
+
+        // =====================================================
+        // MOSTRA GAME OVER PARA QUEM MORREU
+        // =====================================================
+
+        ClientRpcParams mortoParams =
+            new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds =
+                        new ulong[]
+                        {
+                            jogadorMorto
+                        }
+                }
+            };
+
+        MostrarGameOverClientRpc(
+            mortoParams
+        );
+
+
+        // =====================================================
+        // PROCURA O OUTRO JOGADOR
+        // =====================================================
+
+        ulong jogadorVencedor =
+            ulong.MaxValue;
+
+        foreach (
+            ulong clientId
+            in NetworkManager.Singleton
+                .ConnectedClientsIds)
+        {
+            if (clientId != jogadorMorto)
+            {
+                jogadorVencedor = clientId;
+                break;
+            }
+        }
+
+
+        // =====================================================
+        // MOSTRA YOU WIN PARA O VENCEDOR
+        // =====================================================
+
+        if (jogadorVencedor != ulong.MaxValue)
+        {
+            ClientRpcParams vencedorParams =
+                new ClientRpcParams
+                {
+                    Send =
+                        new ClientRpcSendParams
+                        {
+                            TargetClientIds =
+                                new ulong[]
+                                {
+                                    jogadorVencedor
+                                }
+                        }
+                };
+
+            MostrarYouWinClientRpc(
+                vencedorParams
+            );
+        }
+
+
+        // =====================================================
+        // DESATIVA O JOGO
+        // =====================================================
+
         DieClientRpc();
 
-        // Voltar ao menu depois de um tempo
+        // Voltar ao menu depois do tempo
         Invoke(
             nameof(VoltarTodosAoMenu),
             tempoAntesDeVoltar
         );
+    }
+
+
+    // =========================================================
+    // GAME OVER - SOMENTE QUEM MORREU
+    // =========================================================
+
+    [ClientRpc]
+    private void MostrarGameOverClientRpc(
+        ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log(
+            "GAME OVER - ESTE JOGADOR MORREU"
+        );
+
+        if (gameOverPanel != null)
+        {
+            gameOverPanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning(
+                "Game Over Panel não foi configurado!"
+            );
+        }
+    }
+
+
+    // =========================================================
+    // YOU WIN - SOMENTE QUEM SOBREVIVEU
+    // =========================================================
+
+    [ClientRpc]
+    private void MostrarYouWinClientRpc(
+        ClientRpcParams clientRpcParams = default)
+    {
+        Debug.Log(
+            "YOU WIN - ESTE JOGADOR SOBREVIVEU"
+        );
+
+        if (youWinPanel != null)
+        {
+            youWinPanel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning(
+                "You Win Panel não foi configurado!"
+            );
+        }
     }
 
 

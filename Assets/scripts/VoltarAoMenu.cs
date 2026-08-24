@@ -5,10 +5,8 @@ public class VoltarAoMenu : MonoBehaviour
 {
     public static VoltarAoMenu Instance;
 
-    [Header("Cena inicial")]
+    [Header("Nome da cena do Menu")]
     public string nomeCenaMenu = "Menu";
-
-    private bool voltando = false;
 
     private void Awake()
     {
@@ -17,10 +15,7 @@ public class VoltarAoMenu : MonoBehaviour
 
     public void VoltarMenu()
     {
-        if (voltando)
-            return;
-
-        voltando = true;
+        Debug.Log("Voltando para o Menu...");
 
         SceneManager.LoadScene(nomeCenaMenu);
     }
