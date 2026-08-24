@@ -489,6 +489,7 @@ GameObject:
   - component: {fileID: 7064580150238891337}
   - component: {fileID: 5859460738331884775}
   - component: {fileID: 1348220406530328916}
+  - component: {fileID: 3126987535237663366}
   m_Layer: 0
   m_Name: snake
   m_TagString: Player
@@ -609,3 +610,24 @@ MonoBehaviour:
   scoreText: {fileID: 0}
   alturaMinima: -5
   tempoAntesDeVoltar: 1.5
+--- !u!65 &3126987535237663366
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8260893832459066258}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}

@@ -1755,6 +1755,7 @@ GameObject:
   - component: {fileID: 519611422}
   - component: {fileID: 519611421}
   - component: {fileID: 519611420}
+  - component: {fileID: 519611423}
   m_Layer: 0
   m_Name: Cube (8)
   m_TagString: Wall
@@ -1855,6 +1856,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519611418}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &519611423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519611418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1d54685dbb2dbb40a7c65524f8e320e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MataPlayer
 --- !u!1 &535327112
 GameObject:
   m_ObjectHideFlags: 0
@@ -2104,10 +2117,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: arvore (6)
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 7395970278427546791, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
+      propertyPath: m_EditorClassIdentifier
+      value: Assembly-CSharp::TreeKill_GameOver
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 7395970278427546791, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6760941367651552366, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2090429838}
   m_SourcePrefab: {fileID: 100100000, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
 --- !u!1 &577257044
 GameObject:
@@ -2331,6 +2352,7 @@ GameObject:
   - component: {fileID: 586360223}
   - component: {fileID: 586360222}
   - component: {fileID: 586360221}
+  - component: {fileID: 586360224}
   m_Layer: 0
   m_Name: Cube (7)
   m_TagString: Wall
@@ -2431,6 +2453,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 586360219}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &586360224
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 586360219}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1d54685dbb2dbb40a7c65524f8e320e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MataPlayer
 --- !u!1 &600439453
 GameObject:
   m_ObjectHideFlags: 0
@@ -2443,6 +2477,7 @@ GameObject:
   - component: {fileID: 600439456}
   - component: {fileID: 600439455}
   - component: {fileID: 600439454}
+  - component: {fileID: 600439458}
   m_Layer: 0
   m_Name: Cube (3)
   m_TagString: Wall
@@ -2543,6 +2578,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 701444349}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &600439458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 600439453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1d54685dbb2dbb40a7c65524f8e320e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MataPlayer
 --- !u!1 &608345038
 GameObject:
   m_ObjectHideFlags: 0
@@ -4494,6 +4541,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6760941367651552366, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2062321417}
+    - targetCorrespondingSourceObject: {fileID: 6760941367651552366, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2062321421}
   m_SourcePrefab: {fileID: 100100000, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
 --- !u!1 &1045637276
 GameObject:
@@ -9107,6 +9157,7 @@ GameObject:
   - component: {fileID: 1903041483}
   - component: {fileID: 1903041482}
   - component: {fileID: 1903041481}
+  - component: {fileID: 1903041485}
   m_Layer: 0
   m_Name: Cube (5)
   m_TagString: Wall
@@ -9207,6 +9258,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 701444349}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1903041485
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1903041480}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1d54685dbb2dbb40a7c65524f8e320e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MataPlayer
 --- !u!1 &1943381678
 GameObject:
   m_ObjectHideFlags: 0
@@ -9846,6 +9909,35 @@ MonoBehaviour:
   autoRestart: 1
   restartDelay: 2.5
   destroyPlayer: 1
+--- !u!114 &2062321421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1415820333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1d54685dbb2dbb40a7c65524f8e320e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MataPlayer
+--- !u!1 &2090429833 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6760941367651552366, guid: 6574e7cd61b7c7c4bb48832fa072a4ad, type: 3}
+  m_PrefabInstance: {fileID: 560908075}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2090429838
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090429833}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1d54685dbb2dbb40a7c65524f8e320e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MataPlayer
 --- !u!1001 &2116826282
 PrefabInstance:
   m_ObjectHideFlags: 0
